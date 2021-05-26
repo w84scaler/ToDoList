@@ -102,7 +102,6 @@ class TaskRedactor extends Component {
     }
 
     render() {
-        console.log(this.state.files)
         let files = "Choose files"
         if (this.state.files.length !== 0) {
             files = ""

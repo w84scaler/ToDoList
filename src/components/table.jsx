@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import Table from "react-table-6";
+import Action from "../action/taskAction"; 
 
 class _Table extends Component {
 
@@ -49,7 +50,7 @@ class _Table extends Component {
                    {
                      props.original.files.map(file => 
                       <div>
-                        <a className="filehrefs" href={`http://localhost:3228/api/file/${file}`}>{file.substring(24, file.length)}</a>
+                        <span className="action" onClick={this._onDownloadClick.bind(this, file)}>{file.substring(14, file.length)}</span>
                       </div>
                      )
                    }
@@ -72,6 +73,10 @@ class _Table extends Component {
             } 
            }]
       }
+    }
+
+    _onDownloadClick(file){
+      Action.downloadFile(file);
     }
 
     _onDelete(id){

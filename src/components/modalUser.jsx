@@ -16,8 +16,7 @@ class _ModalUser extends Component {
     }
 
     async login(){
-        console.log("login")
-        let res = await UserAction.login(this.state.login,this.state.password);
+        let res = await UserAction.login({ login: this.state.login , password: this.state.password });
         if(!res){
             alert("invalid login or password")
         }else{

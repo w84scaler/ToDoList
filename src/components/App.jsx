@@ -8,6 +8,10 @@ import Store from "../store/taskStore";
 import Action from "../action/taskAction";
 import ModalUser from "./modalUser"
 
+import socketIOClient from "socket.io-client";
+
+var socket;
+
 class App extends Component {
   constructor(props) {
     super(props);
@@ -22,6 +26,26 @@ class App extends Component {
   }
 
   componentWillMount() {
+    const options = {
+      transportOptions: {
+        polling: {
+          extraHeaders: {
+            'user_cookie': document.cookie
+          }
+        }
+      },
+      withCredentials: true
+    }
+    socket = socketIOClient('http://localhost:3228', options);
+    socket.on('connection', data => {
+      console.log(data);
+    });
+    socket.on("auth_error", err => {
+      console.log(err.statusCode);
+      console.log(err.message);
+      if (err.statusCode == 401)
+        alert(err.message);
+    });
     Action.getTasks([])
   }
 
@@ -69,7 +93,7 @@ class App extends Component {
 
   afterOpenModal() {
     // references are now sync'd and can be accessed.
-    console.log("aaaa")
+    console.log("modal")
   }
  
   closeModal(){
@@ -89,7 +113,7 @@ class App extends Component {
         >
         </ModalUser>
         <Navigation loginClick={this.openModal}/>
-        <Table data = {this.state.tasks} onDelete = {this._DeleteTask} onEditClick = {this._onEditClick} />
+        <Table data = {this.state.tasks} onDelete = {this._DeleteTask} onEditClick = {this._onEditClick}/>
         <StatusFilter handler = {this.StatusFilterChange} />
         <TaskRedactor createTask = {this._CreateTask} editTask = {this._EditTask} EditingTask = {this.state.EditingTask} />
       </div>
@@ -97,4 +121,4 @@ class App extends Component {
   }
 }
 
-export default App;
+export { App, socket };

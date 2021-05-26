@@ -1,35 +1,33 @@
-import Dispatcher from "../dispatcher/dispatcher";
-import actionTypes from "./types";
-var axios = require('axios');
+import { socket } from "../components/App";
+import API from "../api/api";
 
 const userAction = {
 
-    login(login, password){
-        return axios.post('http://localhost:3228/user/login', {login : login, password: password}, {withCredentials: true})
-        .then(res => {
-            return res;
-        })
-        .catch(err => {
-            console.error(err)
-        });
+    login(data){
+        return API.login(data)
+            .then(responseData => {                
+                socket.disconnect().connect();
+                return 200;
+            })
+            .catch(error => {
+                console.log(error);
+            })
     },
 
-    /*register(login, password){
-        return axios.post('http://localhost:3228/user/register', {login : login, password: password}, {withCredentials: true})
-        .then(res => {
-            return res;
-        })
-        .catch(err => {
-            console.error(err)
-        });
-    },*/
-
     logout(){
-        return axios.post('http://localhost:3228/user/logout',{}, {withCredentials: true})
-        .then(()=>Dispatcher.dispatch({
-            type: actionTypes.REQUEST_FAILURE,
-            //error: err
-        }))
+        document.cookie = "auth=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";                
+        socket.disconnect().connect();
+    },
+
+    register(_login, _password){
+        return API.register({login : _login, password : _password})
+            .then(data => {
+                socket.disconnect().connect();
+                return 201;
+            })
+            .catch(err => {
+                console.log(err);
+            })
     }
 }
 

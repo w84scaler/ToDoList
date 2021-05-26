@@ -1,97 +1,108 @@
 import Dispatcher from "../dispatcher/dispatcher";
 import actionTypes from "./types";
-var axios = require('axios');
+import download from 'js-file-download';
+import API from "../api/api";
+import { socket } from "../components/App";
+
+var cookie = require('cookie');
 
 const TaskAction = {
-
     getTasks(status) {
-        Dispatcher.dispatch({
-            type: actionTypes.GET_TASKS,
-        });
-        let url = `http://localhost:3228/api/task?`;
-        status.forEach(element => {
-            url += ('status=' + element + '&');
-        });
-        url = url.substring(0, url.length - 1);
-        axios.get(url, {withCredentials: true})
-            .then(data => {
-                Dispatcher.dispatch({
-                    type: actionTypes.REQUEST_SUCCESS,
-                    tasks: data.data
-                })}
-            )
-            .catch(err =>
-                Dispatcher.dispatch({
-                    type: actionTypes.REQUEST_FAILURE,
-                    //error: err
-                })
-            );
-    },
-
-    createTask(data){
-        var formData = new FormData();
-        formData.append("name",data.name);
-        formData.append("desc",data.desc);
-        if (data.start_date !== "")
-            formData.append("start_date",new Date(data.start_date));
-        if (data.end_date !== "")
-            formData.append("end_date",new Date(data.end_date));
-        formData.append("status",data.status);
-        for (let i = 0; i < data.files.length; i++) {
-            formData.append("filedata", data.files[i]);
-        }
-        axios({
-            method: 'post',
-            url: 'http://localhost:3228/api/task',
-            data: formData,
-            headers: {'Content-Type': 'multipart/form-data' },
-            withCredentials: true
+        API.getTasks(status)
+        .then(data => {
+            Dispatcher.dispatch({
+                type: actionTypes.REQUEST_SUCCESS,
+                tasks: data
             })
-        .then(() =>{
-            this.getTasks([])
         })
-        .catch(err =>
-            console.error(err)
-        );
+        .catch(error => {
+            console.log(error);
+        });
     },
 
-    deleteTask(id){
-        axios.delete('http://localhost:3228/api/task/' + id, {withCredentials: true})
-        .then(() =>
-            this.getTasks([])
-        )
-        .catch(err =>
-            console.error(err)
-        );
+    deleteTask(_id){
+        checkCookie();
+        API.deleteTask(_id)
+            .then(data => {
+                this.getTasks("");
+            })
+            .catch(error => {
+                console.log(error);
+            })
+    },
+
+    downloadFile(fileName){
+        checkCookie();
+        API.downloadFile(fileName)
+            .then(data => {
+                download(data, fileName.substring(14, fileName.length));
+            })
+            .catch(error => {
+                console.log(error);
+            })
+    },
+    
+    createTask(_data){
+        console.log(_data)
+        checkCookie();
+        if(_data.files) {
+            _data.filenames = [];
+            _data.binfiles = [];
+            for (let i = 0; i < _data.files.length; i++) {
+                _data.filenames[i] = _data.files[i].name;
+                _data.binfiles[i] = _data.files[i];
+            }
+            _data.files = [];
+        }   
+        API.createTask(_data)
+            .then(res => { 
+                this.getTasks("");
+            })
     },
 
     updateTask(data){
-        console.log(data);
-        var formData = new FormData();
-        formData.append("id",data.id);
-        formData.append("name",data.name);
-        formData.append("desc",data.desc);
-        formData.append("start_date",new Date(data.start_date));
-        if (data.end_date !== undefined)
-            formData.append("end_date",new Date(data.end_date));
-        formData.append("status",data.status);
-        for (let i = 0; i < data.files.length; i++) {
-            formData.append("filedata", data.files[i]);
-        }
-        axios({
-            withCredentials: true,
-            method: 'put',
-            url: `http://localhost:3228/api/task`,
-            data: formData,
-            headers: {'Content-Type': 'multipart/form-data' }
+        checkCookie();
+        this.clearEditingTask();
+
+        data.start_date = new Date(data.start_date);
+        data.end_date = new Date(data.end_date);
+
+        if(data.files) {
+            data.filenames = [];
+            data.binfiles = [];
+            for (let i = 0; i < data.files.length; i++) {
+                data.filenames[i] = data.files[i].name;
+                data.binfiles[i] = data.files[i];
+            }
+            data.files = [];
+        }   
+        
+        API.updateTask(data)
+            .then(() => {
+                console.log("update");
+                this.getTasks([]);
             })
-        .then(() => {
-            this.getTasks([])
-        })
-        .catch(err =>
-            console.error(err)
-        );      
+    },
+
+    choseTaskFromTable(task) {
+        Dispatcher.dispatch({
+            type: actionTypes.CHOOSE_TASK,
+            editingTask: task
+        });
+    },
+
+    clearEditingTask() {
+        Dispatcher.dispatch({
+            type: actionTypes.CLEAR_TASK,
+        });
     }
 }
 
 export default TaskAction;
+
+function checkCookie(){
+    if (socket.io.engine.opts.transportOptions.polling.extraHeaders.user_cookie!==document.cookie){
+        socket.disconnect().connect();
+    }
+    
+}
